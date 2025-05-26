@@ -23,23 +23,22 @@
     <div class="container mt-5">
         <h1 class="text-center mb-4">Библиотека книг</h1>
         
-        <!-- Форма добавления книги -->
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">Добавить новую книгу</h5>
-                <form id="addBookForm">
+                <form action="/books" method="POST">
                     <div class="row">
                         <div class="col-md-3">
-                            <input type="number" class="form-control" id="bookId" placeholder="ID" required>
+                            <input type="number" class="form-control" name="id" placeholder="ID" required>
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" id="bookTitle" placeholder="Название" required>
+                            <input type="text" class="form-control" name="title" placeholder="Название" required>
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" id="bookAuthor" placeholder="Автор" required>
+                            <input type="text" class="form-control" name="author" placeholder="Автор" required>
                         </div>
                         <div class="col-md-2">
-                            <input type="number" class="form-control" id="bookYear" placeholder="Год">
+                            <input type="number" class="form-control" name="year" placeholder="Год">
                         </div>
                         <div class="col-md-1">
                             <button type="submit" class="btn btn-primary w-100">+</button>
@@ -49,134 +48,27 @@
             </div>
         </div>
 
-        <!-- Список книг -->
-        <div id="booksList" class="row"></div>
-    </div>
-
-    <script>
-        // Функция для загрузки всех книг
-        async function loadBooks() {
-            try {
-                const response = await fetch('http://localhost:8000/books');
-                const books = await response.json();
-                const booksList = document.getElementById('booksList');
-                booksList.innerHTML = '';
-                
-                books.forEach(book => {
-                    const bookCard = `
-                        <div class="col-md-4">
-                            <div class="card book-card">
-                                <div class="card-body">
-                                    <h5 class="card-title">${book.title}</h5>
-                                    <h6 class="card-subtitle mb-2 text-muted">${book.author}</h6>
-                                    <p class="card-text">Год: ${book.year || 'Не указан'}</p>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-warning btn-sm" onclick="editBook(${book.id})">Редактировать</button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteBook(${book.id})">Удалить</button>
-                                    </div>
-                                </div>
-                            </div>
+        <div class="row">
+            {% for book in books %}
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ book.title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ book.author }}</h6>
+                        <p class="card-text">Год: {{ book.year if book.year else 'Не указан' }}</p>
+                        <div class="action-buttons">
+                            <form action="/books/{{ book.id }}/edit" method="GET" style="display: inline;">
+                                <button type="submit" class="btn btn-warning btn-sm">Редактировать</button>
+                            </form>
+                            <form action="/books/{{ book.id }}/delete" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Вы уверены?')">Удалить</button>
+                            </form>
                         </div>
-                    `;
-                    booksList.innerHTML += bookCard;
-                });
-            } catch (error) {
-                console.error('Ошибка при загрузке книг:', error);
-            }
-        }
-
-        // Функция для добавления книги
-        document.getElementById('addBookForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const book = {
-                id: parseInt(document.getElementById('bookId').value),
-                title: document.getElementById('bookTitle').value,
-                author: document.getElementById('bookAuthor').value,
-                year: parseInt(document.getElementById('bookYear').value) || null
-            };
-
-            try {
-                const response = await fetch('http://localhost:8000/books', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(book)
-                });
-
-                if (response.ok) {
-                    document.getElementById('addBookForm').reset();
-                    loadBooks();
-                }
-            } catch (error) {
-                console.error('Ошибка при добавлении книги:', error);
-            }
-        });
-
-        // Функция для удаления книги
-        async function deleteBook(id) {
-            if (confirm('Вы уверены, что хотите удалить эту книгу?')) {
-                try {
-                    const response = await fetch(`http://localhost:8000/books/${id}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (response.ok) {
-                        loadBooks();
-                    }
-                } catch (error) {
-                    console.error('Ошибка при удалении книги:', error);
-                }
-            }
-        }
-
-        // Функция для редактирования книги
-        async function editBook(id) {
-            try {
-                const response = await fetch(`http://localhost:8000/books/${id}`);
-                const book = await response.json();
-                
-                document.getElementById('bookId').value = book.id;
-                document.getElementById('bookTitle').value = book.title;
-                document.getElementById('bookAuthor').value = book.author;
-                document.getElementById('bookYear').value = book.year || '';
-                
-                // Изменяем форму для обновления
-                const form = document.getElementById('addBookForm');
-                form.onsubmit = async (e) => {
-                    e.preventDefault();
-                    const updatedBook = {
-                        id: parseInt(document.getElementById('bookId').value),
-                        title: document.getElementById('bookTitle').value,
-                        author: document.getElementById('bookAuthor').value,
-                        year: parseInt(document.getElementById('bookYear').value) || null
-                    };
-
-                    try {
-                        const updateResponse = await fetch(`http://localhost:8000/books/${id}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(updatedBook)
-                        });
-
-                        if (updateResponse.ok) {
-                            form.reset();
-                            form.onsubmit = null; // Возвращаем стандартный обработчик
-                            loadBooks();
-                        }
-                    } catch (error) {
-                        console.error('Ошибка при обновлении книги:', error);
-                    }
-                };
-            } catch (error) {
-                console.error('Ошибка при загрузке книги:', error);
-            }
-        }
-
-        // Загружаем книги при загрузке страницы
-        loadBooks();
-    </script>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </body>
 </html>

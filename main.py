@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -20,10 +21,7 @@ app.add_middleware(
 # Монтируем статические файлы
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-
-@app.get("/")
-def root():
-    return RedirectResponse(url="/static/index.html")
+templates = Jinja2Templates(directory=".")
 
 
 # Модель книги
@@ -36,6 +34,13 @@ class Book(BaseModel):
 
 # Временное "хранилище" — список книг
 books_db: List[Book] = []
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "books": books_db}
+    )
 
 
 # Получить список всех книг
@@ -53,30 +58,49 @@ def get_book(book_id: int):
     raise HTTPException(status_code=404, detail="Книга не найдена")
 
 
-# Добавить новую книгу
-@app.post("/books", response_model=Book)
-def create_book(book: Book):
+@app.post("/books")
+async def create_book(
+    id: int = Form(...),
+    title: str = Form(...),
+    author: str = Form(...),
+    year: Optional[int] = Form(None),
+):
+    book = Book(id=id, title=title, author=author, year=year)
     books_db.append(book)
-    return book
+    return RedirectResponse(url="/", status_code=303)
 
 
-# Обновить книгу по ID
-@app.put("/books/{book_id}", response_model=Book)
-def update_book(book_id: int, updated_book: Book):
-    for i, book in enumerate(books_db):
+@app.get("/books/{book_id}/edit", response_class=HTMLResponse)
+async def edit_book_form(request: Request, book_id: int):
+    for book in books_db:
         if book.id == book_id:
-            books_db[i] = updated_book
-            return updated_book
+            return templates.TemplateResponse(
+                "edit.html", {"request": request, "book": book}
+            )
     raise HTTPException(status_code=404, detail="Книга не найдена")
 
 
-# Удалить книгу по ID
-@app.delete("/books/{book_id}")
-def delete_book(book_id: int):
+@app.post("/books/{book_id}/edit")
+async def edit_book(
+    book_id: int,
+    id: int = Form(...),
+    title: str = Form(...),
+    author: str = Form(...),
+    year: Optional[int] = Form(None),
+):
+    for i, book in enumerate(books_db):
+        if book.id == book_id:
+            books_db[i] = Book(id=id, title=title, author=author, year=year)
+            return RedirectResponse(url="/", status_code=303)
+    raise HTTPException(status_code=404, detail="Книга не найдена")
+
+
+@app.post("/books/{book_id}/delete")
+async def delete_book(book_id: int):
     for i, book in enumerate(books_db):
         if book.id == book_id:
             del books_db[i]
-            return {"message": "Книга удалена"}
+            return RedirectResponse(url="/", status_code=303)
     raise HTTPException(status_code=404, detail="Книга не найдена")
 
 
