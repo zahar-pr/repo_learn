@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import List, Optional
+import uvicorn
 
 app = FastAPI()
 
@@ -63,3 +64,7 @@ def delete_book(book_id: int):
             del books_db[i]
             return {"message": "Книга удалена"}
     raise HTTPException(status_code=404, detail="Книга не найдена")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
