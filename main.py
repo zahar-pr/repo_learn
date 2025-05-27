@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Монтируем статические файлы
+# Монтируем статические файлы     
 app.mount("/static", StaticFiles(directory="."), name="static")
 
 templates = Jinja2Templates(directory=".")
