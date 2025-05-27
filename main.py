@@ -34,7 +34,7 @@ class Book(BaseModel):
 
 # Временное "хранилище" — список книг
 books_db: List[Book] = []
-# эту строку нужно удалить
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
